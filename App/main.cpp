@@ -25,7 +25,7 @@ void readWriteLock(int prio, bool write)
         QVector<QSharedPointer<CancellationRequest>> cancellationRequests;
         for (int prio = priority+1; prio <= QThread::InheritPriority; prio++)
         {
-            QSharedPointer<CancellationRequest> r(new CancellationRequest(resource.name() + QStringLiteral("-cancellation-") + QString::number(prio)));
+            QSharedPointer<CancellationRequest> r(new CancellationRequest(QString(resource.name() + QStringLiteral("-cancellation-") + QString::number(prio)).toStdString()));
             cancellationRequests.append(r);
 
             qInfo() << "[prio" << priority << "] Sending cancellation request to prio" << prio;
@@ -38,7 +38,7 @@ void readWriteLock(int prio, bool write)
                              write ? ReadWriteLock::LockMethod::WRITE : ReadWriteLock::LockMethod::READ);
         qDebug() << "Acquired the lock.";
 
-        CancellationRequest cancellation(resource.name() + QStringLiteral("-cancellation-") + QString::number(priority));
+        CancellationRequest cancellation(QString(resource.name() + QStringLiteral("-cancellation-") + QString::number(priority)).toStdString());
 
         // Do something with the resource
         if (write)

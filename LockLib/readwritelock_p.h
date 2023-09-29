@@ -1,7 +1,6 @@
 #pragma once
 
-#include <QString>
-#include <QAtomicInteger>
+#include <string>
 #include <Windows.h>
 #include "readwritelock.h"
 
@@ -17,7 +16,7 @@
 class ReadWriteLockPrivate
 {
 public:
-    ReadWriteLockPrivate(const QString &name);
+    ReadWriteLockPrivate(const std::string &name);
 
     void lock(const ReadWriteLock::LockMethod &method = ReadWriteLock::LockMethod::READ);
     void unlock();

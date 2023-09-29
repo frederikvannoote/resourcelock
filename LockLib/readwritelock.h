@@ -1,14 +1,15 @@
 #pragma once
 
 #include "LockLib_global.h"
-#include <QSharedPointer>
+#include <memory>
+#include <string>
 class ReadWriteLockPrivate;
 
 
 class LOCKLIB_EXPORT ReadWriteLock
 {
 public:
-    ReadWriteLock(const QString &name);
+    ReadWriteLock(const std::string &name);
 
     enum LockMethod
     {
@@ -22,6 +23,5 @@ public:
     bool isLockedForWriting() const;
 
 private:
-    Q_DECLARE_PRIVATE(ReadWriteLock)
-    QSharedPointer<ReadWriteLockPrivate> const d_ptr;
+    std::shared_ptr<ReadWriteLockPrivate> d_ptr;
 };

@@ -5,7 +5,7 @@
 
 Resource::Resource(const QString &name):
     m_name(name),
-    m_rwLock(name + QStringLiteral("RW")),
+    m_rwLock(name.toStdString() + "RW"),
     m_features({ QSharedPointer<Feature>(new Feature(m_rwLock)) })
 {
 }

@@ -1,39 +1,35 @@
 #include "readwritelock.h"
 #include "readwritelock_p.h"
-#include <QDebug>
 #include <limits.h>
+#include <iostream>
 
 
-ReadWriteLock::ReadWriteLock(const QString &name):
+ReadWriteLock::ReadWriteLock(const std::string &name):
     d_ptr(new ReadWriteLockPrivate(name))
 {
 }
 
 void ReadWriteLock::lock(const LockMethod &method)
 {
-    Q_D(ReadWriteLock);
-    return d->lock(method);
+    return d_ptr->lock(method);
 }
 
 void ReadWriteLock::unlock()
 {
-    Q_D(ReadWriteLock);
-    return d->unlock();
+    return d_ptr->unlock();
 }
 
 bool ReadWriteLock::isLockedForReading() const
 {
-    Q_D(const ReadWriteLock);
-    return d->m_isLocked && d->m_method == ReadWriteLock::READ;
+    return d_ptr->m_isLocked && d_ptr->m_method == ReadWriteLock::READ;
 }
 
 bool ReadWriteLock::isLockedForWriting() const
 {
-    Q_D(const ReadWriteLock);
-    return d->m_isLocked && d->m_method == ReadWriteLock::WRITE;
+    return d_ptr->m_isLocked && d_ptr->m_method == ReadWriteLock::WRITE;
 }
 
-ReadWriteLockPrivate::ReadWriteLockPrivate(const QString &name):
+ReadWriteLockPrivate::ReadWriteLockPrivate(const std::string &name):
     m_method(ReadWriteLock::READ),
     m_isLocked(false),
     m_lock(nullptr),
@@ -41,13 +37,13 @@ ReadWriteLockPrivate::ReadWriteLockPrivate(const QString &name):
 {
     if (name.size() > 0)
     {
-        m_lock = CreateSemaphoreA(nullptr, m_maxReads, m_maxReads, name.toStdString().c_str());
+        m_lock = CreateSemaphoreA(nullptr, m_maxReads, m_maxReads, name.c_str());
 
         // If handle is NULL, the lock() and unlock() functions will be no-ops.
         if (m_lock == NULL)
         {
-            qWarning() << "------ failed to create semaphore" << name.toStdString().c_str() <<
-                m_lock << GetLastError();
+            std::cerr << "Failed to create semaphore " << name << " " <<
+                m_lock << " " << GetLastError();
         }
     }
 }
@@ -69,7 +65,7 @@ void ReadWriteLockPrivate::lock(const ReadWriteLock::LockMethod &method)
                 }
                 else
                 {
-                    qWarning() << "------ problem locking mutex" << /*m_name <<*/ m_lock << event;
+                    std::cerr << "Problem locking mutex " << /*m_name <<*/ m_lock << " " << event;
                 }
             }
         }
@@ -89,7 +85,7 @@ void ReadWriteLockPrivate::unlock()
         }
         else
         {
-            qWarning() << "------ failed to unlock mutex" << /*m_name <<*/ m_lock << "last error" << GetLastError();
+            std::cerr << "Failed to unlock mutex " << /*m_name <<*/ m_lock << " last error " << GetLastError();
         }
     }
 }

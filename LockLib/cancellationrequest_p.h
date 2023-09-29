@@ -1,13 +1,13 @@
 #pragma once
 
-#include <QString>
-#include <QAtomicInteger>
+#include <string>
 #include <Windows.h>
 
 class CancellationRequestPrivate
 {
 public:
-    CancellationRequestPrivate(const QString &name);
+    CancellationRequestPrivate(const std::string &name);
+    CancellationRequestPrivate(const CancellationRequestPrivate &name);
     virtual ~CancellationRequestPrivate();
 
     bool isRequested() const;
@@ -17,7 +17,6 @@ public:
 
 private:
     HANDLE m_mutex = NULL;
-    const QString m_name;
-    QAtomicInteger<bool> m_isLocked;
+    const std::string m_name;
     bool m_weOwnTheLock;
 };

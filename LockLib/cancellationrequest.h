@@ -1,14 +1,15 @@
 #pragma once
 
 #include "LockLib_global.h"
-#include <QSharedPointer>
+#include <memory>
+#include <string>
 class CancellationRequestPrivate;
 
 
 class LOCKLIB_EXPORT CancellationRequest
 {
 public:
-    CancellationRequest(const QString &name);
+    CancellationRequest(const std::string &name);
     CancellationRequest(const CancellationRequest &other);
     CancellationRequest(const CancellationRequest &&other);
     virtual ~CancellationRequest();
@@ -22,6 +23,5 @@ public:
     void undo();
 
 private:
-    Q_DECLARE_PRIVATE(CancellationRequest)
-    QSharedPointer<CancellationRequestPrivate> d_ptr;
+    std::shared_ptr<CancellationRequestPrivate> d_ptr;
 };

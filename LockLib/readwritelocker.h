@@ -11,6 +11,5 @@ public:
     ReadWriteLocker(ReadWriteLock &lock, const ReadWriteLock::LockMethod &method = ReadWriteLock::LockMethod::READ);
 
 private:
-    Q_DECLARE_PRIVATE(ReadWriteLocker)
-    QSharedPointer<ReadWriteLockerPrivate> const d_ptr;
+    std::shared_ptr<ReadWriteLockerPrivate> d_ptr;
 };
