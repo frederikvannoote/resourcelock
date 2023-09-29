@@ -1,9 +1,8 @@
 #pragma once
 
-#include "ResourceLib_global.h"
 class ReadWriteLock;
 
-class RESOURCELIB_EXPORT Feature
+class Feature
 {
 public:
     Feature(ReadWriteLock &lock);

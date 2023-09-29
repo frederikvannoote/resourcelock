@@ -1,13 +1,12 @@
 #pragma once
 
-#include "ResourceLib_global.h"
 #include "readwritelock.h"
 #include "feature.h"
 #include <QSharedPointer>
 #include <QList>
 
 
-class RESOURCELIB_EXPORT Resource
+class Resource
 {
 public:
     Resource(const QString &name);
