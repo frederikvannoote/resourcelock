@@ -15,9 +15,18 @@ qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
+# ResourceLib dependency
 win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../ResourceLib/release/ -lResourceLib
 else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../ResourceLib/debug/ -lResourceLib
 else:unix: LIBS += -L$$OUT_PWD/../ResourceLib/ -lResourceLib
 
 INCLUDEPATH += $$PWD/../ResourceLib
 DEPENDPATH += $$PWD/../ResourceLib
+
+# LockLib dependency
+win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../LockLib/release/ -lLockLib
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../LockLib/debug/ -lLockLib
+else:unix: LIBS += -L$$OUT_PWD/../LockLib/ -lLockLib
+
+INCLUDEPATH += $$PWD/../LockLib
+DEPENDPATH += $$PWD/../LockLib

@@ -10,20 +10,22 @@ QT += core
 
 SOURCES += \
     feature.cpp \
-    resource.cpp \
-    resourcelock.cpp \
-    resourcelockwatcher.cpp
+    resource.cpp
 
 HEADERS += \
     ResourceLib_global.h \
     feature.h \
-    resource.h \
-    resourcelock.h \
-    resourcelock_p.h \
-    resourcelockwatcher.h
+    resource.h
 
 # Default rules for deployment.
 unix {
     target.path = /usr/lib
 }
 !isEmpty(target.path): INSTALLS += target
+
+win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../LockLib/release/ -lLockLib
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../LockLib/debug/ -lLockLib
+else:unix: LIBS += -L$$OUT_PWD/../LockLib/ -lLockLib
+
+INCLUDEPATH += $$PWD/../LockLib
+DEPENDPATH += $$PWD/../LockLib
