@@ -1,8 +1,9 @@
 #pragma once
 
 #include <QString>
-#include <QAtomicInteger>
-#include <Windows.h>
+#include <QList>
+#include "singleresourcelock.h"
+
 
 class ResourceLockPrivate
 {

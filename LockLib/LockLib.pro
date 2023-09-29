@@ -1,5 +1,5 @@
 TEMPLATE = lib
-DEFINES += RESOURCELIB_LIBRARY
+DEFINES += LOCKLIB_LIBRARY
 
 CONFIG += c++11
 QT += core
@@ -9,18 +9,18 @@ QT += core
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
-    feature.cpp \
-    resource.cpp \
-    resourcelock.cpp \
-    resourcelockwatcher.cpp
+    cancellationrequest.cpp \
+    readwritelock.cpp \
+    readwritelocker.cpp
 
 HEADERS += \
-    ResourceLib_global.h \
-    feature.h \
-    resource.h \
-    resourcelock.h \
-    resourcelock_p.h \
-    resourcelockwatcher.h
+    LockLib_global.h \
+    cancellationrequest.h \
+    cancellationrequest_p.h \
+    readwritelock.h \
+    readwritelock_p.h \
+    readwritelocker.h \
+    readwritelocker_p.h
 
 # Default rules for deployment.
 unix {

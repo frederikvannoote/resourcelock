@@ -13,13 +13,28 @@ ResourceLock::ResourceLock(const ResourceLock &other):
 {
 }
 
+ResourceLock::ResourceLock(const ResourceLock &&other):
+    d_ptr(qMove(other.d_ptr))
+{
+}
+
 ResourceLock::~ResourceLock()
 {
 }
 
+ResourceLock &ResourceLock::operator=(ResourceLock &other)
+{
+    if (this != &other) {
+        d_ptr = other.d_ptr;
+    }
+    return *this;
+}
+
 ResourceLock &ResourceLock::operator=(ResourceLock &&other)
 {
-    operator=(qMove(other));
+    if (this != &other) {
+        qSwap(d_ptr, other.d_ptr);
+    }
     return *this;
 }
 
@@ -59,36 +74,12 @@ bool ResourceLockPrivate::isValid() const
 
 void ResourceLockPrivate::lock()
 {
-    if (m_mutex)
-    {
-        DWORD event = WaitForSingleObjectEx(m_mutex, INFINITE, FALSE);
-        {
-            if (event == WAIT_OBJECT_0)
-            {
-                qInfo() << "Acquired lock to" << m_name;
-                m_isLocked = true;
-            }
-            else
-            {
-                qWarning() << "------ problem locking mutex" << m_name << m_mutex << event;
-            }
-        }
-    }
+
 }
 
 void ResourceLockPrivate::unlock()
 {
-    if (m_mutex  && m_isLocked)
-    {
-        qInfo() << "Releasing lock to" << m_name << "...";
-        BOOL success = ReleaseMutex(m_mutex);
-        if (success == TRUE)
-        {
-            m_isLocked = false;
-        }
-        else
-        {
-            qWarning() << "------ failed to unlock mutex" << m_name << m_mutex << "last error" << GetLastError();
-        }
-    }
+
 }
+
+

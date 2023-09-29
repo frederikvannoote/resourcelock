@@ -4,8 +4,16 @@
 
 
 Resource::Resource(const QString &name):
-    m_name(name)
+    m_name(name),
+    m_lock(name),
+    m_rwLock(name + QStringLiteral("RW")),
+    m_features({ QSharedPointer<Feature>(new Feature(m_rwLock)) })
 {
+}
+
+QString Resource::name() const
+{
+    return m_name;
 }
 
 ResourceLock Resource::lock(int priority) const
@@ -14,40 +22,12 @@ ResourceLock Resource::lock(int priority) const
     return ResourceLock(m_name);
 }
 
-bool Resource::doSomething()
+ReadWriteLock& Resource::rwLock()
 {
-    ResourceLock l = lock();
-    return doSomething(l);
+    return m_rwLock;
 }
 
-bool Resource::doSomething(ResourceLock &lock)
+QList<QSharedPointer<Feature> > Resource::features() const
 {
-    if (!lock.isValid())
-    {
-        qWarning() << "Attempt to access resource" << m_name << "with invalid lock";
-        return false;
-    }
-
-    qDebug() << "Do something with" << m_name;
-    QThread::sleep(10);
-    qDebug() << "Done something with" << m_name;
-
-    return true;
-}
-
-int Resource::getSomething() const
-{
-    ResourceLock l = lock();
-    return getSomething(l);
-}
-
-int Resource::getSomething(ResourceLock &lock) const
-{
-    if (!lock.isValid())
-    {
-        qWarning() << "Attempt to access resource" << m_name << "with invalid lock";
-        return false;
-    }
-
-    return 42;
+    return m_features;
 }

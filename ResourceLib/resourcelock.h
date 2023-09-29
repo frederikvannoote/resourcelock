@@ -19,5 +19,5 @@ public:
 
 private:
     Q_DECLARE_PRIVATE(ResourceLock)
-    QSharedPointer<ResourceLockPrivate> const d_ptr;
+    QSharedPointer<ResourceLockPrivate> d_ptr;
 };
