@@ -48,6 +48,12 @@ ReadWriteLockPrivate::ReadWriteLockPrivate(const std::string &name):
     }
 }
 
+ReadWriteLockPrivate::~ReadWriteLockPrivate()
+{
+    if (m_lock)
+        CloseHandle(m_lock);
+}
+
 void ReadWriteLockPrivate::lock(const ReadWriteLock::LockMethod &method)
 {
     if (m_lock)

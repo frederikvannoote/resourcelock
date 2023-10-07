@@ -17,6 +17,7 @@ class ReadWriteLockPrivate
 {
 public:
     ReadWriteLockPrivate(const std::string &name);
+    ~ReadWriteLockPrivate();
 
     void lock(const ReadWriteLock::LockMethod &method = ReadWriteLock::LockMethod::READ);
     void unlock();
