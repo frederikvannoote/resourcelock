@@ -10,7 +10,7 @@
 #include "readwritelocker.h"
 
 
-void readWriteLock(int prio, bool write)
+void readWriteLock(int prio, bool write, bool crash)
 {
     const QString lock_path = "C:\\ProgramData\\devicelocks\\";
 
@@ -53,6 +53,9 @@ void readWriteLock(int prio, bool write)
                     break;
                 }
             }
+
+            if (crash)
+                resource.features().at(1)->doSomething();
         }
         else
         {
@@ -66,6 +69,9 @@ void readWriteLock(int prio, bool write)
                     break;
                 }
             }
+
+            if (crash)
+                resource.features().at(1)->getSomething();
         }
     }
 }
@@ -87,17 +93,21 @@ int main(int argc, char *argv[])
     parser.addOption(priorityOption);
 
     QCommandLineOption actionOption(QStringList() << "a" << "action",
-                                    QCoreApplication::translate("action", "Action"),
-                                    QCoreApplication::translate("action", "action"));
+                                    QCoreApplication::translate("action", "Action"));
     actionOption.setDefaultValue(QStringLiteral("Read"));
     parser.addOption(actionOption);
+
+    QCommandLineOption crashOption(QStringList() << "c" << "crash",
+                                    QCoreApplication::translate("crash", "Crash"));
+    parser.addOption(crashOption);
 
     parser.process(a);
 
     qDebug() << parser.value(actionOption).toLower();
 
     readWriteLock(parser.value(priorityOption).toInt(),
-                  parser.value(actionOption).toLower() == QStringLiteral("write"));
+                  parser.value(actionOption).toLower() == QStringLiteral("write"),
+                  parser.isSet(crashOption));
 
     return 0;
 }
