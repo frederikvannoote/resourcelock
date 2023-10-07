@@ -1,12 +1,11 @@
 #pragma once
 
-#include "LockLib_global.h"
 #include <memory>
 #include <string>
 class ReadWriteLockPrivate;
 
 
-class LOCKLIB_EXPORT ReadWriteLock
+class ReadWriteLock
 {
 public:
     ReadWriteLock(const std::string &name);
