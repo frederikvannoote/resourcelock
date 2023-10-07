@@ -1,12 +1,11 @@
 #pragma once
 
-#include "LockLib_global.h"
 #include <memory>
 #include <string>
 class CancellationRequestPrivate;
 
 
-class LOCKLIB_EXPORT CancellationRequest
+class CancellationRequest
 {
 public:
     CancellationRequest(const std::string &name);
