@@ -3,9 +3,9 @@
 #include <QThread>
 
 
-Resource::Resource(const QString &name):
+Resource::Resource(const QString &lockpath, const QString &name):
     m_name(name),
-    m_rwLock(name.toStdString() + "RW"),
+    m_rwLock(lockpath.toStdString() + name.toStdString() + "RW"),
     m_features({ QSharedPointer<Feature>(new Feature(m_rwLock)) })
 {
 }

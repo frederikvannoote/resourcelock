@@ -1,7 +1,10 @@
 #include "readwritelock.h"
 #include "readwritelock_p.h"
-#include <limits.h>
 #include <iostream>
+#include <stdio.h>
+#include <thread>
+#include <chrono>
+#include <fileapi.h>
 
 
 ReadWriteLock::ReadWriteLock(const std::string &name):
@@ -21,77 +24,84 @@ void ReadWriteLock::unlock()
 
 bool ReadWriteLock::isLockedForReading() const
 {
-    return d_ptr->m_isLocked && d_ptr->m_method == ReadWriteLock::READ;
+    return d_ptr->isLocked() && d_ptr->method() == ReadWriteLock::READ;
 }
 
 bool ReadWriteLock::isLockedForWriting() const
 {
-    return d_ptr->m_isLocked && d_ptr->m_method == ReadWriteLock::WRITE;
+    return d_ptr->isLocked() && d_ptr->method() == ReadWriteLock::WRITE;
 }
 
 ReadWriteLockPrivate::ReadWriteLockPrivate(const std::string &name):
+    m_name(name),
     m_method(ReadWriteLock::READ),
-    m_isLocked(false),
-    m_lock(nullptr),
-    m_maxReads(10 /* LONG_MAX */)
+    m_file(nullptr)
 {
-    if (name.size() > 0)
-    {
-        m_lock = CreateSemaphoreA(nullptr, m_maxReads, m_maxReads, name.c_str());
-
-        // If handle is NULL, the lock() and unlock() functions will be no-ops.
-        if (m_lock == NULL)
-        {
-            std::cerr << "Failed to create semaphore " << name << " " <<
-                m_lock << " " << GetLastError();
-        }
-    }
 }
 
 ReadWriteLockPrivate::~ReadWriteLockPrivate()
 {
-    if (m_lock)
-        CloseHandle(m_lock);
+    unlock();
 }
 
 void ReadWriteLockPrivate::lock(const ReadWriteLock::LockMethod &method)
 {
-    if (m_lock)
+    m_method = method;
+
+    std::cout << "Acquiring the lock...";
+    while (!m_file)
     {
-        const long max = (method == ReadWriteLock::READ) ? 1:m_maxReads;
-        for (long i=0; i<max; i++)
+        const std::wstring name = std::wstring(m_name.begin(), m_name.end());
+
+        if (method == ReadWriteLock::LockMethod::WRITE)
         {
-            DWORD event = WaitForSingleObjectEx(m_lock, INFINITE, FALSE);
-            {
-                if (event == WAIT_OBJECT_0)
-                {
-                    // qInfo() << "Acquired lock to" << m_name;
-                    m_method = method;
-                    m_isLocked = true;
-                }
-                else
-                {
-                    std::cerr << "Problem locking mutex " << /*m_name <<*/ m_lock << " " << event;
-                }
-            }
+            m_file = CreateFile(name.c_str(),           // name of the write
+                                GENERIC_WRITE,          // open for writing
+                                0,                      // do not share
+                                NULL,                   // default security
+                                OPEN_ALWAYS,            // if it does not exist, create it
+                                FILE_ATTRIBUTE_NORMAL,  // normal file
+                                NULL);                  // no attr. template
+        }
+        else
+        {
+            m_file = CreateFile(name.c_str(),           // name of the write
+                                GENERIC_READ,           // open for reading
+                                FILE_SHARE_READ,        // can share
+                                NULL,                   // default security
+                                OPEN_ALWAYS,            // if it does not exist, create it
+                                FILE_ATTRIBUTE_NORMAL,  // normal file
+                                NULL);                  // no attr. template
+        }
+
+        if (m_file == INVALID_HANDLE_VALUE)
+        {
+            std::cout << ".";
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            m_file = nullptr;
         }
     }
+    std::cout << "[locked]" << std::endl;
 }
 
 void ReadWriteLockPrivate::unlock()
 {
-    if (m_lock /* && m_isLocked*/)
+    if (m_file)
     {
-        // qInfo() << "Releasing lock to" << m_name << "...";
-        const long max = (m_method == ReadWriteLock::READ) ? 1:m_maxReads;
-        BOOL success = ReleaseSemaphore(m_lock, max, nullptr);
-        if (success == TRUE)
-        {
-            m_isLocked = false;
-        }
-        else
-        {
-            std::cerr << "Failed to unlock mutex " << /*m_name <<*/ m_lock << " last error " << GetLastError();
-        }
+        if (m_method == ReadWriteLock::LockMethod::WRITE)
+            UnlockFileEx(m_file, 0, 0, 0, 0);
+
+        CloseHandle(m_file);
+        m_file = nullptr;
     }
+}
+
+bool ReadWriteLockPrivate::isLocked() const
+{
+    return m_file != nullptr;
+}
+
+ReadWriteLock::LockMethod ReadWriteLockPrivate::method() const
+{
+    return m_method;
 }

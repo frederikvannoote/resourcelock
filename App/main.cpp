@@ -12,12 +12,14 @@
 
 void readWriteLock(int prio, bool write)
 {
+    const QString lock_path = "C:\\ProgramData\\devicelocks\\";
+
     // Set priority of the main thread to influence scheduling priority.
     const QThread::Priority priority = static_cast<QThread::Priority>(prio);
     QThread::currentThread()->setPriority(priority);
     qDebug() << "Set priority to" << priority;
 
-    Resource resource("PreciousResource");
+    Resource resource(lock_path, QString("PreciousResource"));
 
     // Section where we do something with the resource
     {
@@ -33,10 +35,8 @@ void readWriteLock(int prio, bool write)
         }
 
         // Acquire lock
-        qDebug() << "Acquiring the lock...";
         ReadWriteLocker lock(resource.rwLock(),
                              write ? ReadWriteLock::LockMethod::WRITE : ReadWriteLock::LockMethod::READ);
-        qDebug() << "Acquired the lock.";
 
         CancellationRequest cancellation(QString(resource.name() + QStringLiteral("-cancellation-") + QString::number(priority)).toStdString());
 

@@ -9,7 +9,7 @@
 class Resource
 {
 public:
-    Resource(const QString &name);
+    Resource(const QString &lockpath, const QString &name);
 
     QString name() const;
 
