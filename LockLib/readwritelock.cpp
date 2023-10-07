@@ -88,9 +88,6 @@ void ReadWriteLockPrivate::unlock()
 {
     if (m_file)
     {
-        if (m_method == ReadWriteLock::LockMethod::WRITE)
-            UnlockFileEx(m_file, 0, 0, 0, 0);
-
         CloseHandle(m_file);
         m_file = nullptr;
     }
