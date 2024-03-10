@@ -98,7 +98,7 @@ void CancellationRequestPrivate::request()
         {
         case WAIT_OBJECT_0:
             // We got hold of the mutex
-            std::cout << "We got hold of the mutex" << std::endl;
+            // std::cout << "We got hold of the mutex" << std::endl;
             m_weOwnTheLock = true;
             break;
 
