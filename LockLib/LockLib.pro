@@ -1,4 +1,5 @@
 TEMPLATE = lib
+CONFIG += staticlib
 DEFINES += LOCKLIB_LIBRARY
 
 CONFIG += c++11
