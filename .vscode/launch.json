@@ -1,0 +1,36 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "App (MSVC)",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${command:cmake.launchTargetPath}",
+            "cwd": "${command:cmake.launchTargetDirectory}",
+            "visualizerFile": "c:\\Users\\fred\\AppData\\Roaming\\Code\\User\\workspaceStorage\\a124a6341f30cd221bcee2421c5da66b\\tonka3000.qtvsctools\\qt.natvis.xml",
+            "sourceFileMap": {
+                "C:/work/build/qt5_workdir/w/s": "${QTDIR}../Src",
+                "Q:/qt5_workdir/w/s": "${QTDIR}../Src",
+                "C:/Users/qt/work/install": "${QTDIR}../Src",
+                "C:/Users/qt/work/qt": "${QTDIR}../Src"
+            }
+        },
+        {
+            "name": "App (macOS/Linux)",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${command:cmake.launchTargetPath}",
+            "cwd": "${command:cmake.launchTargetDirectory}",
+            "linux": {
+                "MIMode": "gdb"
+            },
+            "osx": {
+                "MIMode": "lldb"
+            },
+            "visualizerFile": "c:\\Users\\fred\\AppData\\Roaming\\Code\\User\\workspaceStorage\\a124a6341f30cd221bcee2421c5da66b\\tonka3000.qtvsctools\\qt.natvis.xml"
+        }
+    ]
+}
