@@ -22,10 +22,13 @@ public:
     void lock(const ReadWriteLock::LockMethod &method = ReadWriteLock::LockMethod::READ);
     void unlock();
 
+    bool isLockedForReading() const;
+    bool isLockedForWriting() const;
+
     ReadWriteLock::LockMethod m_method;
-    bool m_isLocked;
 
 private:
+    const std::string m_name;
     HANDLE m_lock;
     const long m_maxReads;
 };
