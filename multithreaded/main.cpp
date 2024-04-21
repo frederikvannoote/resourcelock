@@ -71,7 +71,8 @@ void writeSomething(const QString &name, QSharedPointer<Resource> resource, int 
     for (int i=0; i<10; i++)
     {
 //        if (!cancellation.isRequested())
-            resource->features().at(0)->doSomething();
+            if (!resource->features().at(0)->doSomething())
+                std::cout << name.toStdString() << " accesses without lock.";
 //        else
 //        {
 //            qDebug() << name << "[prio" << priority << "] Not executing this step. Cancellation was requested.";

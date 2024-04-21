@@ -3,6 +3,9 @@
 #include <limits.h>
 #include <iostream>
 
+// Define thread-local storage (TLS) variable
+__declspec(thread) bool locked = false;
+
 
 ReadWriteLock::ReadWriteLock(const std::string &name):
     d_ptr(new ReadWriteLockPrivate(name))
@@ -30,49 +33,98 @@ bool ReadWriteLock::isLockedForWriting() const
 }
 
 ReadWriteLockPrivate::ReadWriteLockPrivate(const std::string &name):
-
     m_method(ReadWriteLock::READ),
-    m_name(name),
-    m_lock(nullptr),
-    m_maxReads(10 /* LONG_MAX */)
+    m_readLock(nullptr),
+    m_writeLock(nullptr),
+    m_maxReads(10 /* LONG_MAX */),
+    m_maxWrites(1)
 {
     if (name.size() > 0)
     {
-        m_lock = CreateSemaphoreA(nullptr, m_maxReads, m_maxReads, name.c_str());
+        // Create read semaphore
+        std::string readName = name + "Read";
+        m_readLock = CreateSemaphoreA(nullptr, m_maxReads, m_maxReads, readName.c_str());
 
         // If handle is NULL, the lock() and unlock() functions will be no-ops.
-        if (m_lock == NULL)
+        if (m_readLock == NULL)
         {
             std::cerr << "Failed to create semaphore " << name << " " <<
-                m_lock << " " << GetLastError();
+                m_readLock << " " << GetLastError();
+        }
+
+        // Create write semaphore
+        std::string writeName = name + "Write";
+        m_writeLock = CreateSemaphoreA(nullptr, m_maxWrites, m_maxWrites, writeName.c_str());
+
+        // If handle is NULL, the lock() and unlock() functions will be no-ops.
+        if (m_writeLock == NULL)
+        {
+            std::cerr << "Failed to create semaphore " << name << " " <<
+                m_writeLock << " " << GetLastError();
         }
     }
 }
 
 ReadWriteLockPrivate::~ReadWriteLockPrivate()
 {
-    if (m_lock)
-        CloseHandle(m_lock);
+    if (m_readLock)
+        CloseHandle(m_readLock);
+    if (m_writeLock)
+        CloseHandle(m_writeLock);
 }
 
 void ReadWriteLockPrivate::lock(const ReadWriteLock::LockMethod &method)
 {
-    if (m_lock)
+    if (method == ReadWriteLock::WRITE)
     {
-        const long max = (method == ReadWriteLock::READ) ? 1:m_maxReads;
-        for (long i=0; i<max; i++)
+        // Acquire write lock
+        DWORD event = WaitForSingleObjectEx(m_writeLock, INFINITE, FALSE);
         {
-            DWORD event = WaitForSingleObjectEx(m_lock, INFINITE, FALSE);
+            if (event == WAIT_OBJECT_0)
+            {
+                // qInfo() << "Acquired lock to" << m_name;
+            }
+            else
+            {
+                std::cerr << "Problem locking mutex " << /*m_name <<*/ m_writeLock << " " << event;
+                return;
+            }
+        }
+
+        // Acquire all read locks to avoid read access during writing
+        for (long i=0; i<m_maxReads; i++)
+        {
+            DWORD event = WaitForSingleObjectEx(m_readLock, INFINITE, FALSE);
             {
                 if (event == WAIT_OBJECT_0)
                 {
                     // qInfo() << "Acquired lock to" << m_name;
-                    m_method = method;
                 }
                 else
                 {
-                    std::cerr << "Problem locking mutex " << /*m_name <<*/ m_lock << " " << event;
+                    std::cerr << "Problem locking mutex " << /*m_name <<*/ m_readLock << " " << event;
+                    return;
                 }
+            }
+        }
+
+        m_method = method;
+        locked = true;
+    }
+    else
+    {
+        // Acquire read lock
+        DWORD event = WaitForSingleObjectEx(m_readLock, INFINITE, FALSE);
+        {
+            if (event == WAIT_OBJECT_0)
+            {
+                // qInfo() << "Acquired lock to" << m_name;
+                m_method = method;
+                locked = true;
+            }
+            else
+            {
+                std::cerr << "Problem locking mutex " << /*m_name <<*/ m_readLock << " " << event;
             }
         }
     }
@@ -80,99 +132,54 @@ void ReadWriteLockPrivate::lock(const ReadWriteLock::LockMethod &method)
 
 void ReadWriteLockPrivate::unlock()
 {
-    if (m_lock)
+    if (m_readLock && m_writeLock && locked)
     {
         // qInfo() << "Releasing lock to" << m_name << "...";
-        const long max = (m_method == ReadWriteLock::READ) ? 1:m_maxReads;
-        BOOL success = ReleaseSemaphore(m_lock, max, nullptr);
-        if (success == TRUE)
+        if (m_method == ReadWriteLock::WRITE)
         {
+            // Release all read locks
+            BOOL success = ReleaseSemaphore(m_readLock, m_maxReads, nullptr);
+            if (success == TRUE)
+            {
+            }
+            else
+            {
+                std::cerr << "Failed to unlock mutex " << /*m_name <<*/ m_readLock << " last error " << GetLastError();
+            }
+
+            // Release write lock
+            success = ReleaseSemaphore(m_writeLock, 1, nullptr);
+            if (success == TRUE)
+            {
+            }
+            else
+            {
+                std::cerr << "Failed to unlock mutex " << /*m_name <<*/ m_writeLock << " last error " << GetLastError();
+            }
+
+            locked = false;
         }
         else
         {
-            std::cerr << "Failed to unlock mutex " << /*m_name <<*/ m_lock << " last error " << GetLastError();
+            BOOL success = ReleaseSemaphore(m_readLock, 1, nullptr);
+            if (success == TRUE)
+            {
+                locked = false;
+            }
+            else
+            {
+                std::cerr << "Failed to unlock mutex " << /*m_name <<*/ m_readLock << " last error " << GetLastError();
+            }
         }
     }
 }
 
 bool ReadWriteLockPrivate::isLockedForReading() const
 {
-    bool result = false;
-    HANDLE handle = CreateSemaphoreA(nullptr, m_maxReads, m_maxReads, m_name.c_str());
-
-    if (handle == NULL) {
-        std::cerr << "Failed to create mutex: " << GetLastError() << std::endl;
-        return false;
-    }
-
-    DWORD dwWaitResult = WaitForSingleObject(handle, 0);
-
-    switch (dwWaitResult) {
-    case WAIT_OBJECT_0:
-//        std::cout << "Mutex is available, your thread has locked it." << std::endl;
-        ReleaseSemaphore(handle, 1, NULL);
-        result = true;
-        break;
-
-    case WAIT_TIMEOUT:
-        std::cout << "Mutex is currently owned by another thread." << std::endl;
-        break;
-
-    case WAIT_ABANDONED:
-        std::cerr << "Mutex was abandoned." << std::endl;
-        break;
-
-    case WAIT_FAILED:
-        std::cerr << "Wait for mutex failed: " << GetLastError() << std::endl;
-        break;
-
-    default:
-        std::cerr << "Unknown wait result." << std::endl;
-        break;
-    }
-
-    CloseHandle(handle);
-
-    return result;
+    return m_method == ReadWriteLock::READ && locked;
 }
 
 bool ReadWriteLockPrivate::isLockedForWriting() const
 {
-    bool result = false;
-    HANDLE handle = CreateSemaphoreA(nullptr, m_maxReads, m_maxReads, m_name.c_str());
-
-    if (handle == NULL) {
-        std::cerr << "Failed to create mutex: " << GetLastError() << std::endl;
-        return false;
-    }
-
-    DWORD dwWaitResult = WaitForSingleObject(handle, 0);
-
-    switch (dwWaitResult) {
-    case WAIT_OBJECT_0:
-//        std::cout << "Mutex is available, your thread has locked it." << std::endl;
-        ReleaseSemaphore(handle, m_maxReads, NULL);
-        result = true;
-        break;
-
-    case WAIT_TIMEOUT:
-        std::cout << "Mutex is currently owned by another thread." << std::endl;
-        break;
-
-    case WAIT_ABANDONED:
-        std::cerr << "Mutex was abandoned." << std::endl;
-        break;
-
-    case WAIT_FAILED:
-        std::cerr << "Wait for mutex failed: " << GetLastError() << std::endl;
-        break;
-
-    default:
-        std::cerr << "Unknown wait result." << std::endl;
-        break;
-    }
-
-    CloseHandle(handle);
-
-    return result;
+    return m_method == ReadWriteLock::WRITE && locked;
 }

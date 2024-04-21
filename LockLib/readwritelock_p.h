@@ -28,7 +28,8 @@ public:
     ReadWriteLock::LockMethod m_method;
 
 private:
-    const std::string m_name;
-    HANDLE m_lock;
+    HANDLE m_readLock;
+    HANDLE m_writeLock;
     const long m_maxReads;
+    const long m_maxWrites;
 };

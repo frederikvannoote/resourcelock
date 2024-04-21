@@ -18,7 +18,7 @@ bool Feature::doSomething()
         return false;
     }
 
-    std::cout << "." << std::flush;
+    std::cout << "W" << std::flush;
     QThread::sleep(1);
 
     return true;
@@ -32,7 +32,7 @@ int Feature::getSomething() const
         return false;
     }
 
-    std::cout << "." << std::flush;
+    std::cout << "R" << std::flush;
     QThread::sleep(1);
 
     return 42;
