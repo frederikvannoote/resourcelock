@@ -2,9 +2,7 @@
 #include "readwritelock_p.h"
 #include <limits.h>
 #include <iostream>
-
-// Define thread-local storage (TLS) variable
-__declspec(thread) bool locked = false;
+#include <QDebug>
 
 
 ReadWriteLock::ReadWriteLock(const std::string &name):
@@ -17,23 +15,12 @@ void ReadWriteLock::lock(const LockMethod &method)
     return d_ptr->lock(method);
 }
 
-void ReadWriteLock::unlock()
+void ReadWriteLock::unlock(const LockMethod &method)
 {
-    return d_ptr->unlock();
-}
-
-bool ReadWriteLock::isLockedForReading() const
-{
-    return d_ptr->isLockedForReading();
-}
-
-bool ReadWriteLock::isLockedForWriting() const
-{
-    return d_ptr->isLockedForWriting();
+    return d_ptr->unlock(method);
 }
 
 ReadWriteLockPrivate::ReadWriteLockPrivate(const std::string &name):
-    m_method(ReadWriteLock::READ),
     m_readLock(nullptr),
     m_writeLock(nullptr),
     m_maxReads(10 /* LONG_MAX */),
@@ -48,8 +35,12 @@ ReadWriteLockPrivate::ReadWriteLockPrivate(const std::string &name):
         // If handle is NULL, the lock() and unlock() functions will be no-ops.
         if (m_readLock == NULL)
         {
-            std::cerr << "Failed to create semaphore " << name << " " <<
+            qWarning() << "--- Failed to create semaphore " << name << " " <<
                 m_readLock << " " << GetLastError();
+        }
+        else
+        {
+            qInfo() << "--- Created read semaphore" << readName;
         }
 
         // Create write semaphore
@@ -59,34 +50,46 @@ ReadWriteLockPrivate::ReadWriteLockPrivate(const std::string &name):
         // If handle is NULL, the lock() and unlock() functions will be no-ops.
         if (m_writeLock == NULL)
         {
-            std::cerr << "Failed to create semaphore " << name << " " <<
+            qWarning() << "--- Failed to create semaphore " << name << " " <<
                 m_writeLock << " " << GetLastError();
+        }
+        else
+        {
+            qInfo() << "--- Created write semaphore" << writeName;
         }
     }
 }
 
 ReadWriteLockPrivate::~ReadWriteLockPrivate()
 {
+    qInfo() << "--- destructor ReadWriteLockPrivate";
     if (m_readLock)
+    {
+        qInfo() << "--- closing read lock handle";
         CloseHandle(m_readLock);
+    }
     if (m_writeLock)
+    {
+        qInfo() << "--- closing write lock handle";
         CloseHandle(m_writeLock);
+    }
 }
 
 void ReadWriteLockPrivate::lock(const ReadWriteLock::LockMethod &method)
 {
     if (method == ReadWriteLock::WRITE)
     {
+        qInfo() << "--- Attempting to acquire write lock" << m_writeLock;
         // Acquire write lock
         DWORD event = WaitForSingleObjectEx(m_writeLock, INFINITE, FALSE);
         {
             if (event == WAIT_OBJECT_0)
             {
-                // qInfo() << "Acquired lock to" << m_name;
+                qInfo() << "--- Acquired write lock" << m_writeLock;
             }
             else
             {
-                std::cerr << "Problem locking mutex " << /*m_name <<*/ m_writeLock << " " << event;
+                qWarning() << "--- Problem locking mutex " << m_writeLock << " " << event;
                 return;
             }
         }
@@ -94,92 +97,81 @@ void ReadWriteLockPrivate::lock(const ReadWriteLock::LockMethod &method)
         // Acquire all read locks to avoid read access during writing
         for (long i=0; i<m_maxReads; i++)
         {
+            qInfo() << "--- Attempting to acquire read lock" << i << m_readLock << "after acquiring write lock";
             DWORD event = WaitForSingleObjectEx(m_readLock, INFINITE, FALSE);
             {
                 if (event == WAIT_OBJECT_0)
                 {
-                    // qInfo() << "Acquired lock to" << m_name;
+                    qInfo() << "--- Acquired read lock" << i << "after acquiring write lock";
                 }
                 else
                 {
-                    std::cerr << "Problem locking mutex " << /*m_name <<*/ m_readLock << " " << event;
+                    qWarning() << "--- Problem locking mutex " << m_readLock << " " << event;
                     return;
                 }
             }
         }
-
-        m_method = method;
-        locked = true;
     }
     else
     {
+        qInfo() << "--- Attempting to acquire read lock" << m_readLock;
         // Acquire read lock
         DWORD event = WaitForSingleObjectEx(m_readLock, INFINITE, FALSE);
         {
             if (event == WAIT_OBJECT_0)
             {
-                // qInfo() << "Acquired lock to" << m_name;
-                m_method = method;
-                locked = true;
+                qInfo() << "--- Acquired read lock" << m_readLock;
             }
             else
             {
-                std::cerr << "Problem locking mutex " << /*m_name <<*/ m_readLock << " " << event;
+                qWarning() << "--- Problem locking mutex " << m_readLock << " " << event;
             }
         }
     }
 }
 
-void ReadWriteLockPrivate::unlock()
+void ReadWriteLockPrivate::unlock(const ReadWriteLock::LockMethod &method)
 {
-    if (m_readLock && m_writeLock && locked)
+    if (m_readLock && m_writeLock)
     {
-        // qInfo() << "Releasing lock to" << m_name << "...";
-        if (m_method == ReadWriteLock::WRITE)
+        if (method == ReadWriteLock::WRITE)
         {
+            qInfo() << "--- Attempting to release all read locks" << m_readLock;
             // Release all read locks
             BOOL success = ReleaseSemaphore(m_readLock, m_maxReads, nullptr);
             if (success == TRUE)
             {
+                qInfo() << "--- released" << m_maxReads << "read locks" << m_readLock;
             }
             else
             {
-                std::cerr << "Failed to unlock mutex " << /*m_name <<*/ m_readLock << " last error " << GetLastError();
+                qWarning() << "--- Failed to unlock mutex " << m_readLock << " last error " << GetLastError();
             }
 
             // Release write lock
+            qInfo() << "--- Attempting to release write lock" << m_writeLock;
             success = ReleaseSemaphore(m_writeLock, 1, nullptr);
             if (success == TRUE)
             {
+                qInfo() << "--- released write lock" << m_writeLock;
             }
             else
             {
-                std::cerr << "Failed to unlock mutex " << /*m_name <<*/ m_writeLock << " last error " << GetLastError();
+                qWarning() << "--- Failed to unlock writeLock mutex " << m_writeLock << " last error " << GetLastError();
             }
-
-            locked = false;
         }
         else
         {
+            qInfo() << "--- Attempting to release read lock" << m_readLock;
             BOOL success = ReleaseSemaphore(m_readLock, 1, nullptr);
             if (success == TRUE)
             {
-                locked = false;
+                qInfo() << "--- released read lock";
             }
             else
             {
-                std::cerr << "Failed to unlock mutex " << /*m_name <<*/ m_readLock << " last error " << GetLastError();
+                qWarning() << "--- Failed to unlock readLock mutex " << m_readLock << " last error " << GetLastError();
             }
         }
     }
-}
-
-bool ReadWriteLockPrivate::isLockedForReading() const
-{
-    return m_method == ReadWriteLock::READ && locked;
-}
-
-bool ReadWriteLockPrivate::isLockedForWriting() const
-{
-    return m_method == ReadWriteLock::WRITE && locked;
 }

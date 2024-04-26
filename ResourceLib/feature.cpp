@@ -1,5 +1,6 @@
 #include "feature.h"
 #include "readwritelock.h"
+#include "readwritelocker.h"
 #include <QThread>
 #include <QDebug>
 #include <iostream>
@@ -10,30 +11,32 @@ Feature::Feature(ReadWriteLock &lock):
 {
 }
 
-bool Feature::doSomething()
+bool Feature::doSomething(const ReadWriteLocker &rwLocker, const QString &context)
 {
-    if (!m_rwLock.isLockedForWriting())
+    if (!rwLocker.isLockedForWriting())
     {
-        qWarning() << "Attempt to access resource with invalid lock";
+        qWarning() << "Write lock was not acquired for resource";
         return false;
     }
 
-    std::cout << "W" << std::flush;
-    QThread::sleep(1);
+    qInfo() << context << "is writing";
+
+    // QThread::msleep(20);
 
     return true;
 }
 
-int Feature::getSomething() const
+int Feature::getSomething(const ReadWriteLocker &rwLocker, const QString &context) const
 {
-    if (!m_rwLock.isLockedForReading())
+    if (!rwLocker.isLockedForReading())
     {
-        qWarning() << "Attempt to access resource with invalid lock";
+        qWarning() << "Read lock was not acquired for resource";
         return false;
     }
 
-    std::cout << "R" << std::flush;
-    QThread::sleep(1);
+    qInfo() << context << "is reading";
+
+    // QThread::msleep(10);
 
     return 42;
 }
