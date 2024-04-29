@@ -26,6 +26,12 @@ bool Feature::doSomething(const ReadWriteLocker &rwLocker, const QString &contex
     return true;
 }
 
+bool Feature::doSomething()
+{
+    ReadWriteLocker lock(m_rwLock, ReadWriteLock::WRITE);
+    return doSomething(lock);
+}
+
 int Feature::getSomething(const ReadWriteLocker &rwLocker, const QString &context) const
 {
     if (!rwLocker.isLockedForReading())
@@ -40,3 +46,10 @@ int Feature::getSomething(const ReadWriteLocker &rwLocker, const QString &contex
 
     return 42;
 }
+
+int Feature::getSomething() const
+{
+    ReadWriteLocker lock(m_rwLock, ReadWriteLock::READ);
+    return getSomething(lock);
+}
+

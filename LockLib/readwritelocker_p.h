@@ -7,7 +7,7 @@
 class ReadWriteLockerPrivate
 {
 public:
-    ReadWriteLockerPrivate(ReadWriteLock &lock, const QString& context, const ReadWriteLock::LockMethod &method);
+    ReadWriteLockerPrivate(ReadWriteLock &lock, const ReadWriteLock::LockMethod &method, const QString& context);
     virtual ~ReadWriteLockerPrivate();
 
     ReadWriteLock &m_lock;

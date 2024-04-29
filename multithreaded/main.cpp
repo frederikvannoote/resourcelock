@@ -15,7 +15,7 @@ void readSomething(const QString &name, QSharedPointer<Resource> resource, int p
 
     // Acquire lock
     qDebug() << name << "Acquiring the read lock...";
-    ReadWriteLocker locker(resource->rwLock(), name, ReadWriteLock::LockMethod::READ);
+    ReadWriteLocker locker(resource->rwLock(), ReadWriteLock::LockMethod::READ, name);
     qDebug() << name << "Acquired the read lock.";
 
     // Read the resource with intermediate checks if cancellation was requested.
@@ -33,7 +33,7 @@ void writeSomething(const QString &name, QSharedPointer<Resource> resource, int 
 
     // Acquire lock
     qDebug() << name << "Acquiring the write lock...";
-    ReadWriteLocker locker(resource->rwLock(), name, ReadWriteLock::LockMethod::WRITE);
+    ReadWriteLocker locker(resource->rwLock(), ReadWriteLock::LockMethod::WRITE, name);
     qDebug() << name << "Acquired the write lock.";
 
     // Write to the resource with intermediate checks if cancellation was requested.

@@ -28,7 +28,7 @@ void readSomething(Resource &resource, int priority)
 
     // Acquire lock
     qDebug() << "Acquiring the read lock...";
-    ReadWriteLocker locker(resource.rwLock(), "main thread", ReadWriteLock::LockMethod::READ);
+    ReadWriteLocker locker(resource.rwLock(), ReadWriteLock::LockMethod::READ, "main thread");
     qDebug() << "Acquired the read lock.";
 
 //    CancellationRequest cancellation(QString(resource.name() + QStringLiteral("-cancellation-") + QString::number(priority)).toStdString());
@@ -66,7 +66,7 @@ void writeSomething(Resource &resource, int priority)
 
     // Acquire lock
     qDebug() << "Acquiring the write lock...";
-    ReadWriteLocker locker(resource.rwLock(), "main thread", ReadWriteLock::LockMethod::WRITE);
+    ReadWriteLocker locker(resource.rwLock(), ReadWriteLock::LockMethod::WRITE, "main thread");
     qDebug() << "Acquired the write lock.";
 
 //    CancellationRequest cancellation(QString(resource.name() + QStringLiteral("-cancellation-") + QString::number(priority)).toStdString()); // Used to listen if some other app requested cancellation.
