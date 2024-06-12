@@ -2,6 +2,7 @@
 #include "readwritelock_p.h"
 #include <limits.h>
 #include <iostream>
+#include <QDebug>
 
 
 ReadWriteLock::ReadWriteLock(const std::string &name):
@@ -14,165 +15,163 @@ void ReadWriteLock::lock(const LockMethod &method)
     return d_ptr->lock(method);
 }
 
-void ReadWriteLock::unlock()
+void ReadWriteLock::unlock(const LockMethod &method)
 {
-    return d_ptr->unlock();
-}
-
-bool ReadWriteLock::isLockedForReading() const
-{
-    return d_ptr->isLockedForReading();
-}
-
-bool ReadWriteLock::isLockedForWriting() const
-{
-    return d_ptr->isLockedForWriting();
+    return d_ptr->unlock(method);
 }
 
 ReadWriteLockPrivate::ReadWriteLockPrivate(const std::string &name):
-
-    m_method(ReadWriteLock::READ),
-    m_name(name),
-    m_lock(nullptr),
-    m_maxReads(10 /* LONG_MAX */)
+    m_readLock(nullptr),
+    m_writeLock(nullptr),
+    m_maxReads(10 /* LONG_MAX */),
+    m_maxWrites(1)
 {
     if (name.size() > 0)
     {
-        m_lock = CreateSemaphoreA(nullptr, m_maxReads, m_maxReads, name.c_str());
+        // Create read semaphore
+        std::string readName = name + "Read";
+        m_readLock = CreateSemaphoreA(nullptr, m_maxReads, m_maxReads, readName.c_str());
 
         // If handle is NULL, the lock() and unlock() functions will be no-ops.
-        if (m_lock == NULL)
+        if (m_readLock == NULL)
         {
-            std::cerr << "Failed to create semaphore " << name << " " <<
-                m_lock << " " << GetLastError();
+            qWarning() << "--- Failed to create semaphore " << name << " " <<
+                m_readLock << " " << GetLastError();
+        }
+        else
+        {
+            qInfo() << "--- Created read semaphore" << readName;
+        }
+
+        // Create write semaphore
+        std::string writeName = name + "Write";
+        m_writeLock = CreateSemaphoreA(nullptr, m_maxWrites, m_maxWrites, writeName.c_str());
+
+        // If handle is NULL, the lock() and unlock() functions will be no-ops.
+        if (m_writeLock == NULL)
+        {
+            qWarning() << "--- Failed to create semaphore " << name << " " <<
+                m_writeLock << " " << GetLastError();
+        }
+        else
+        {
+            qInfo() << "--- Created write semaphore" << writeName;
         }
     }
 }
 
 ReadWriteLockPrivate::~ReadWriteLockPrivate()
 {
-    if (m_lock)
-        CloseHandle(m_lock);
+    qInfo() << "--- destructor ReadWriteLockPrivate";
+    if (m_readLock)
+    {
+        qInfo() << "--- closing read lock handle";
+        CloseHandle(m_readLock);
+    }
+    if (m_writeLock)
+    {
+        qInfo() << "--- closing write lock handle";
+        CloseHandle(m_writeLock);
+    }
 }
 
 void ReadWriteLockPrivate::lock(const ReadWriteLock::LockMethod &method)
 {
-    if (m_lock)
+    if (method == ReadWriteLock::WRITE)
     {
-        const long max = (method == ReadWriteLock::READ) ? 1:m_maxReads;
-        for (long i=0; i<max; i++)
+        qInfo() << "--- Attempting to acquire write lock" << m_writeLock;
+        // Acquire write lock
+        DWORD event = WaitForSingleObjectEx(m_writeLock, INFINITE, FALSE);
         {
-            DWORD event = WaitForSingleObjectEx(m_lock, INFINITE, FALSE);
+            if (event == WAIT_OBJECT_0)
+            {
+                qInfo() << "--- Acquired write lock" << m_writeLock;
+            }
+            else
+            {
+                qWarning() << "--- Problem locking mutex " << m_writeLock << " " << event;
+                return;
+            }
+        }
+
+        // Acquire all read locks to avoid read access during writing
+        for (long i=0; i<m_maxReads; i++)
+        {
+            qInfo() << "--- Attempting to acquire read lock" << i << m_readLock << "after acquiring write lock";
+            DWORD event = WaitForSingleObjectEx(m_readLock, INFINITE, FALSE);
             {
                 if (event == WAIT_OBJECT_0)
                 {
-                    // qInfo() << "Acquired lock to" << m_name;
-                    m_method = method;
+                    qInfo() << "--- Acquired read lock" << i << "after acquiring write lock";
                 }
                 else
                 {
-                    std::cerr << "Problem locking mutex " << /*m_name <<*/ m_lock << " " << event;
+                    qWarning() << "--- Problem locking mutex " << m_readLock << " " << event;
+                    return;
                 }
+            }
+        }
+    }
+    else
+    {
+        qInfo() << "--- Attempting to acquire read lock" << m_readLock;
+        // Acquire read lock
+        DWORD event = WaitForSingleObjectEx(m_readLock, INFINITE, FALSE);
+        {
+            if (event == WAIT_OBJECT_0)
+            {
+                qInfo() << "--- Acquired read lock" << m_readLock;
+            }
+            else
+            {
+                qWarning() << "--- Problem locking mutex " << m_readLock << " " << event;
             }
         }
     }
 }
 
-void ReadWriteLockPrivate::unlock()
+void ReadWriteLockPrivate::unlock(const ReadWriteLock::LockMethod &method)
 {
-    if (m_lock)
+    if (m_readLock && m_writeLock)
     {
-        // qInfo() << "Releasing lock to" << m_name << "...";
-        const long max = (m_method == ReadWriteLock::READ) ? 1:m_maxReads;
-        BOOL success = ReleaseSemaphore(m_lock, max, nullptr);
-        if (success == TRUE)
+        if (method == ReadWriteLock::WRITE)
         {
+            qInfo() << "--- Attempting to release all read locks" << m_readLock;
+            // Release all read locks
+            BOOL success = ReleaseSemaphore(m_readLock, m_maxReads, nullptr);
+            if (success == TRUE)
+            {
+                qInfo() << "--- released" << m_maxReads << "read locks" << m_readLock;
+            }
+            else
+            {
+                qWarning() << "--- Failed to unlock mutex " << m_readLock << " last error " << GetLastError();
+            }
+
+            // Release write lock
+            qInfo() << "--- Attempting to release write lock" << m_writeLock;
+            success = ReleaseSemaphore(m_writeLock, 1, nullptr);
+            if (success == TRUE)
+            {
+                qInfo() << "--- released write lock" << m_writeLock;
+            }
+            else
+            {
+                qWarning() << "--- Failed to unlock writeLock mutex " << m_writeLock << " last error " << GetLastError();
+            }
         }
         else
         {
-            std::cerr << "Failed to unlock mutex " << /*m_name <<*/ m_lock << " last error " << GetLastError();
+            qInfo() << "--- Attempting to release read lock" << m_readLock;
+            BOOL success = ReleaseSemaphore(m_readLock, 1, nullptr);
+            if (success == TRUE)
+            {
+                qInfo() << "--- released read lock";
+            }
+            else
+            {
+                qWarning() << "--- Failed to unlock readLock mutex " << m_readLock << " last error " << GetLastError();
+            }
         }
     }
-}
-
-bool ReadWriteLockPrivate::isLockedForReading() const
-{
-    bool result = false;
-    HANDLE handle = CreateSemaphoreA(nullptr, m_maxReads, m_maxReads, m_name.c_str());
-
-    if (handle == NULL) {
-        std::cerr << "Failed to create mutex: " << GetLastError() << std::endl;
-        return false;
-    }
-
-    DWORD dwWaitResult = WaitForSingleObject(handle, 0);
-
-    switch (dwWaitResult) {
-    case WAIT_OBJECT_0:
-//        std::cout << "Mutex is available, your thread has locked it." << std::endl;
-        ReleaseSemaphore(handle, 1, NULL);
-        result = true;
-        break;
-
-    case WAIT_TIMEOUT:
-        std::cout << "Mutex is currently owned by another thread." << std::endl;
-        break;
-
-    case WAIT_ABANDONED:
-        std::cerr << "Mutex was abandoned." << std::endl;
-        break;
-
-    case WAIT_FAILED:
-        std::cerr << "Wait for mutex failed: " << GetLastError() << std::endl;
-        break;
-
-    default:
-        std::cerr << "Unknown wait result." << std::endl;
-        break;
-    }
-
-    CloseHandle(handle);
-
-    return result;
-}
-
-bool ReadWriteLockPrivate::isLockedForWriting() const
-{
-    bool result = false;
-    HANDLE handle = CreateSemaphoreA(nullptr, m_maxReads, m_maxReads, m_name.c_str());
-
-    if (handle == NULL) {
-        std::cerr << "Failed to create mutex: " << GetLastError() << std::endl;
-        return false;
-    }
-
-    DWORD dwWaitResult = WaitForSingleObject(handle, 0);
-
-    switch (dwWaitResult) {
-    case WAIT_OBJECT_0:
-//        std::cout << "Mutex is available, your thread has locked it." << std::endl;
-        ReleaseSemaphore(handle, m_maxReads, NULL);
-        result = true;
-        break;
-
-    case WAIT_TIMEOUT:
-        std::cout << "Mutex is currently owned by another thread." << std::endl;
-        break;
-
-    case WAIT_ABANDONED:
-        std::cerr << "Mutex was abandoned." << std::endl;
-        break;
-
-    case WAIT_FAILED:
-        std::cerr << "Wait for mutex failed: " << GetLastError() << std::endl;
-        break;
-
-    default:
-        std::cerr << "Unknown wait result." << std::endl;
-        break;
-    }
-
-    CloseHandle(handle);
-
-    return result;
 }

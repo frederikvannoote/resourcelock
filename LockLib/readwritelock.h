@@ -17,10 +17,7 @@ public:
         WRITE
     };
     void lock(const LockMethod &method = READ);
-    void unlock();
-
-    bool isLockedForReading() const;
-    bool isLockedForWriting() const;
+    void unlock(const LockMethod &method = READ);
 
 private:
     std::shared_ptr<ReadWriteLockPrivate> d_ptr;

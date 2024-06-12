@@ -15,74 +15,76 @@ void readSomething(Resource &resource, int priority)
 {
     qDebug() << "Starting to read something with priority" << priority << "...";
 
-    // Send cancellation request to all lower levels.
-    QVector<QSharedPointer<CancellationRequest>> cancellationRequests;
-    for (int prio = priority+1; prio <= QThread::InheritPriority; prio++)
-    {
-        QSharedPointer<CancellationRequest> r(new CancellationRequest(QString(resource.name() + QStringLiteral("-cancellation-") + QString::number(prio)).toStdString()));
-        cancellationRequests.append(r);
+//    // Send cancellation request to all lower levels.
+//    QVector<QSharedPointer<CancellationRequest>> cancellationRequests;
+//    for (int prio = priority+1; prio <= QThread::InheritPriority; prio++)
+//    {
+//        QSharedPointer<CancellationRequest> r(new CancellationRequest(QString(resource.name() + QStringLiteral("-cancellation-") + QString::number(prio)).toStdString()));
+//        cancellationRequests.append(r);
 
-        qInfo() << "[prio" << priority << "] Sending cancellation request to prio" << prio;
-        r->request();
-    }
+//        qInfo() << "[prio" << priority << "] Sending cancellation request to prio" << prio;
+//        r->request();
+//    }
 
     // Acquire lock
     qDebug() << "Acquiring the read lock...";
-    ReadWriteLocker lock(resource.rwLock(), ReadWriteLock::LockMethod::READ);
+    ReadWriteLocker locker(resource.rwLock(), ReadWriteLock::LockMethod::READ, "main thread");
     qDebug() << "Acquired the read lock.";
 
-    CancellationRequest cancellation(QString(resource.name() + QStringLiteral("-cancellation-") + QString::number(priority)).toStdString());
+//    CancellationRequest cancellation(QString(resource.name() + QStringLiteral("-cancellation-") + QString::number(priority)).toStdString());
 
     // Read the resource with intermediate checks if cancellation was requested.
-    std::cout << "Reading from the resource";
     for (int i=0; i<10; i++)
     {
-        if (!cancellation.isRequested())
-            resource.features().at(0)->getSomething();
-        else
+//        if (!cancellation.isRequested())
         {
-            qDebug() << "[prio" << priority << "] Not executing this step. Cancellation was requested.";
-            break;
+            qInfo() << "Reading from the resource, i" << i;
+            resource.features().at(0)->getSomething(locker, "main thread");
         }
+//        else
+//        {
+//            qDebug() << "[prio" << priority << "] Not executing this step. Cancellation was requested.";
+//            break;
+//        }
     }
-    std::cout << std::endl;
 }
 
 void writeSomething(Resource &resource, int priority)
 {
     qDebug() << "Starting to write something with priority" << priority << "...";
 
-    // Send cancellation request to all lower levels.
-    QVector<QSharedPointer<CancellationRequest>> cancellationRequests;
-    for (int prio = priority+1; prio <= QThread::InheritPriority; prio++)
-    {
-        QSharedPointer<CancellationRequest> r(new CancellationRequest(QString(resource.name() + QStringLiteral("-cancellation-") + QString::number(prio)).toStdString()));
-        cancellationRequests.append(r);
+//    // Send cancellation request to all lower levels.
+//    QVector<QSharedPointer<CancellationRequest>> cancellationRequests;
+//    for (int prio = priority+1; prio <= QThread::InheritPriority; prio++)
+//    {
+//        QSharedPointer<CancellationRequest> r(new CancellationRequest(QString(resource.name() + QStringLiteral("-cancellation-") + QString::number(prio)).toStdString()));
+//        cancellationRequests.append(r);
 
-        qInfo() << "[prio" << priority << "] Sending cancellation request to prio" << prio;
-        r->request();
-    }
+//        qInfo() << "[prio" << priority << "] Sending cancellation request to prio" << prio;
+//        r->request();
+//    }
 
     // Acquire lock
     qDebug() << "Acquiring the write lock...";
-    ReadWriteLocker lock(resource.rwLock(), ReadWriteLock::LockMethod::WRITE);
+    ReadWriteLocker locker(resource.rwLock(), ReadWriteLock::LockMethod::WRITE, "main thread");
     qDebug() << "Acquired the write lock.";
 
-    CancellationRequest cancellation(QString(resource.name() + QStringLiteral("-cancellation-") + QString::number(priority)).toStdString()); // Used to listen if some other app requested cancellation.
+//    CancellationRequest cancellation(QString(resource.name() + QStringLiteral("-cancellation-") + QString::number(priority)).toStdString()); // Used to listen if some other app requested cancellation.
 
-     // Write to the resource with intermediate checks if cancellation was requested.
-    std::cout << "Writing to the resource";
+    // Write to the resource with intermediate checks if cancellation was requested.
     for (int i=0; i<10; i++)
     {
-        if (!cancellation.isRequested())
-            resource.features().at(0)->doSomething();
-        else
+//        if (!cancellation.isRequested())
         {
-            qDebug() << "[prio" << priority << "] Not executing this step. Cancellation was requested.";
-            break;
+            qInfo() << "Writing to the resource, i" << i;
+            resource.features().at(0)->doSomething(locker, "main thread");
         }
+//        else
+//        {
+//            qDebug() << "[prio" << priority << "] Not executing this step. Cancellation was requested.";
+//            break;
+//        }
     }
-    std::cout << std::endl;
 }
 
 int main(int argc, char *argv[])

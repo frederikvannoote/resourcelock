@@ -20,15 +20,11 @@ public:
     ~ReadWriteLockPrivate();
 
     void lock(const ReadWriteLock::LockMethod &method = ReadWriteLock::LockMethod::READ);
-    void unlock();
-
-    bool isLockedForReading() const;
-    bool isLockedForWriting() const;
-
-    ReadWriteLock::LockMethod m_method;
+    void unlock(const ReadWriteLock::LockMethod &method = ReadWriteLock::LockMethod::READ);
 
 private:
-    const std::string m_name;
-    HANDLE m_lock;
+    HANDLE m_readLock;
+    HANDLE m_writeLock;
     const long m_maxReads;
+    const long m_maxWrites;
 };
